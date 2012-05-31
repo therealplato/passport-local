@@ -19,7 +19,7 @@ unobtrusively integrated into any application or framework that supports
 
 The local authentication strategy authenticates users using a username and
 password.  The strategy requires a `verify` callback, which accepts these
-credentials and calls `done` providing a user.
+credentials and calls `done` providing a user. 
 
     passport.use(new LocalStrategy(
       function(username, password, done) {
@@ -29,6 +29,20 @@ credentials and calls `done` providing a user.
           if (!user.verifyPassword(password)) { return done(null, false); }
           return done(null, user);
         });
+      }
+    ));
+
+The strategy expects to be called by a route handling a form, which by default 
+must contain fields named `username` and `password`. You can use differently 
+named fields by passing an options object:
+
+    passport.use(new LocalStrategy(
+      {
+        usernameField: 'handle',
+        passwordField: 'password'
+      }
+     ,function(username, password, done) {
+       // verify credentials, then call done(err,user) or done(err,false)
       }
     ));
 
@@ -45,6 +59,35 @@ application:
       function(req, res) {
         res.redirect('/');
       });
+
+#### Access request object
+Setting the `passReqToCallback` option to `true` makes the Strategy's verification 
+function receive the `req` object as the first parameter. 
+
+Most of the time, just having the username and password will be adequate. 
+Use this option if you are storing data in your request that your verification 
+function needs - perhaps a user has already logged in with openid, and you want 
+to link that user to a local user/pass.
+
+    passport.use(new LocalStrategy(
+      { passReqToCallback: true }
+     ,function(req, username, password, done) {
+        database.fetch(username, password, function(err, localUser){
+          if(!err) {
+            if(req.user.twitterID && (localUser.twitterID == null)) { 
+              localUser.twitterID = req.user.twitterID;
+              database.stash(localUser);
+              return done(null, localUser);
+            } else {
+              return done(null, localUser);
+            };
+          } else {
+            return done(err);
+          };
+        });
+      }
+    ));
+
 
 ## Examples
 
